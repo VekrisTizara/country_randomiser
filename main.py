@@ -30,16 +30,22 @@ async def get_address():
         list_countries.append(data[country_num]["country"])
 
     print(list_countries)
-    requested_countries = {}
+    requested_countries = []
     for i in range(len(list_countries)):
         country = list_countries[i].replace(" ", "")
         url_country = "https://restcountries.com/v3.1/name/"+f"{country}"
         if requests.get(url_country).status_code == 404:
-            requested_countries[country] = "No information found!"
+            requested_countries.append({country:"No information found!", "population":0})
         else:
             with urllib.request.urlopen(url_country) as url:
                 data = json.load(url)
             country1 = Country(data[0]["name"]["official"], data[0]["capital"], data[0]["population"], data[0]["languages"])
-            requested_countries[country] = country1.__dict__
+            if  len(requested_countries) == 0 or country1.population >= requested_countries[0]["population"]:
+                requested_countries.insert(0, country1.__dict__)
+            else:
+                for a in range(len(requested_countries)):
+                    if country1.population >= requested_countries[a]["population"]:
+                        requested_countries.insert(a, country1.__dict__)
+                        break
     return requested_countries
 
