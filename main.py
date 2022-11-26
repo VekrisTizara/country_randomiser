@@ -3,10 +3,9 @@ import urllib.request, json
 import random
 import requests
 
-
 app = FastAPI()
 
-user_num = random.randint(5, 20)
+user_num = 50
 
 class Country:
     def __init__(self, name, capital, population, languages):
@@ -15,7 +14,16 @@ class Country:
         self.population = population
         self.languages = languages
 
-
+def add_country(country_num, data, list_countries):
+    if data[country_num]["country"] in list_countries:
+        with urllib.request.urlopen("https://random-data-api.com/api/v2/addresses") as url:
+            temp_data = json.load(url)
+            print(temp_data)
+            list_countries.append(temp_data["country"])
+        print(f"deleted {data[country_num]}")
+    else:
+        list_countries.append(data[country_num]["country"])
+    return list_countries
 
 @app.get("/")
 async def root():
@@ -27,9 +35,8 @@ async def get_address():
     with urllib.request.urlopen("https://random-data-api.com/api/v2/addresses?size="+f"{user_num}") as url:
         data = json.load(url)
     for country_num in range(user_num):
-        list_countries.append(data[country_num]["country"])
-
-    print(list_countries)
+        list_countries = add_country(country_num, data, list_countries)
+    print(len(list_countries) == user_num)
     requested_countries = []
     for i in range(len(list_countries)):
         country = list_countries[i].replace(" ", "")
@@ -39,7 +46,15 @@ async def get_address():
         else:
             with urllib.request.urlopen(url_country) as url:
                 data = json.load(url)
-            country1 = Country(data[0]["name"]["official"], data[0]["capital"], data[0]["population"], data[0]["languages"])
+
+            capital = "There is no official capital"
+            if "capital" in data[0]:
+                capital = data[0]["capital"]
+
+            country1 = Country(data[0]["name"]["official"],
+                               capital,
+                               data[0]["population"],
+                               data[0]["languages"])
             if  len(requested_countries) == 0 or country1.population >= requested_countries[0]["population"]:
                 requested_countries.insert(0, country1.__dict__)
             else:
