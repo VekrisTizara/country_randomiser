@@ -12,12 +12,13 @@ class Country:
         self.population = population
         self.languages = languages
 
-def add_country(country_index, data, list_countries):
-    current_country = data[country_index]["country"]
+def add_country_and_replace_nonunique(country_index, addresses, list_countries):
+    current_country = addresses[country_index]["country"]
     while current_country in list_countries:
         with urllib.request.urlopen("https://random-data-api.com/api/v2/addresses") as url:
             temp_data = json.load(url)
             current_country = temp_data["country"]
+            addresses[country_index] = temp_data
     list_countries.append(current_country)
     return list_countries
 
@@ -25,10 +26,14 @@ def add_country(country_index, data, list_countries):
 def make_list_countries(countries_amount):
     list_countries = []
     with urllib.request.urlopen("https://random-data-api.com/api/v2/addresses?size=" + f"{countries_amount}") as url:
-        data = json.load(url)
+        addresses = json.load(url)
     for country_index in range(countries_amount):
-        list_countries = add_country(country_index, data, list_countries)
-    return list_countries
+        list_countries = add_country_and_replace_nonunique(country_index, addresses, list_countries)
+    addresses_and_countries = {
+        "countries": list_countries,
+        "addresses": addresses
+    }
+    return addresses_and_countries
 
 def request_countries(list_countries):
     requested_countries = []
@@ -61,13 +66,18 @@ def request_countries(list_countries):
 async def root():
     return {
         "APP NAME": "Country randomizer",
-        "Usage": "Open /countries/ordered_by_population?countries_amount={countries_amount}"
+        "Usage": "Open /countries/ordered_by_population?countries_amount={int}&show_addresses={bool}"
     }
 
 @app.get("/countries/ordered_by_population")
-async def countries_ordered_by_population(countries_amount:int):
+async def countries_ordered_by_population(countries_amount:int, show_addresses: bool):
     if countries_amount < 5 or countries_amount > 20:
         raise HTTPException(status_code=400, detail="Requested number is out of possible range, "
                                                     "countries_amount should be from 5 to 20")
-    return request_countries(make_list_countries(countries_amount))
-
+    countries_and_addresses = make_list_countries(countries_amount)
+    countries_with_data = request_countries(countries_and_addresses["countries"])
+    if show_addresses:
+        return {"addresses":countries_and_addresses["addresses"],
+                "countries": countries_with_data}
+    else:
+        return countries_with_data
