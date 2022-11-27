@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 import urllib.request, json
-import random
 import requests
 
 app = FastAPI()
